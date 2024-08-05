@@ -27,15 +27,21 @@
 		<tag>HEAD</tag>
 	</scm>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
+	<repositories>
 		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+			<id>gitlab-maven</id>
+			<url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
 		</repository>
+	</repositories>
+	<distributionManagement>
+		<repository>
+			<id>gitlab-maven</id>
+			<url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
+		</repository>
+		<snapshotRepository>
+			<id>gitlab-maven</id>
+			<url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
+		</snapshotRepository>
 	</distributionManagement>
 
 	<issueManagement>
@@ -67,7 +73,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<!-- needed to build within Docker -->
-		<skipFormatCode>false</skipFormatCode>
+		<skipFormatCode>true</skipFormatCode>
 		<dependency-check-maven.version>10.0.3</dependency-check-maven.version>
 	</properties>
 

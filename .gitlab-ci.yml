@@ -123,16 +123,11 @@ maven-dependency:
 #    - ./mvnw -ntp org.jacoco:jacoco-maven-plugin:prepare-agent initialize sonar:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONAR_TOKEN -Dmaven.repo.local=$MAVEN_USER_HOME
 #  allow_failure: true
 #
-#maven-package:
-#  image: jhipster/jhipster:v7.0.1
-#  stage: package
-#  script:
-#    - ./mvnw -ntp verify deploy -Pprod -DskipTests -Dmaven.repo.local=$MAVEN_USER_HOME
-#  artifacts:
-#    paths:
-#      - target/*.jar
-#      - target/classes
-#    expire_in: 1 day
+maven-deploy:
+ stage: release
+ script:
+   - mvn deploy -DskipTests -Dmaven.repo.local=$MAVEN_USER_HOME -s ci_settings.xml
+
 # Uncomment the following line to use gitlabs container registry. You need to adapt the REGISTRY_URL in case you are not using gitlab.com
 docker-push:
   stage: release
