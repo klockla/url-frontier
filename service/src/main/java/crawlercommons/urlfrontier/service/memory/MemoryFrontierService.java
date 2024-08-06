@@ -149,13 +149,15 @@ public class MemoryFrontierService extends AbstractFrontierService {
         String crawlId = request.getCrawlID();
         String url = request.getUrl();
         String key = request.getKey();
+        boolean found = false;
+        
         LOG.info("getURLStatus crawlId={} key={} url={}", crawlId, key, url);
 
         QueueWithinCrawl qwc = QueueWithinCrawl.get(key, crawlId);
         URLQueue queue = (URLQueue) getQueues().get(qwc);
         if (queue == null) {
             LOG.error("Could not find queue for Crawl={}, queue={}", crawlId, key);
-            responseObserver.onCompleted();
+            responseObserver.onError(io.grpc.Status.NOT_FOUND.asException());
             return;
         }
 
@@ -164,12 +166,14 @@ public class MemoryFrontierService extends AbstractFrontierService {
 
         URLItem.Builder builder = URLItem.newBuilder();
 
+        KnownURLItem.Builder knownBuilder = KnownURLItem.newBuilder();
+        
         if (queue.isCompleted(url)) {
-            KnownURLItem.Builder builder2 = KnownURLItem.newBuilder();
-            builder2.setInfo(info);
-            builder2.setRefetchableFromDate(0);
-            builder.setKnown(builder2.build());
+        	knownBuilder.setInfo(info);
+        	knownBuilder.setRefetchableFromDate(0);
+            builder.setKnown(knownBuilder.build());
 
+            found = true;
             responseObserver.onNext(builder.build());
         } else {
             Iterator<InternalURL> iter = queue.iterator();
@@ -179,21 +183,27 @@ public class MemoryFrontierService extends AbstractFrontierService {
 
                 if (url.equals(item.url)) {
 
-                    DiscoveredURLItem.Builder builder2 = DiscoveredURLItem.newBuilder();
                     try {
-                        builder2.setInfo(item.toURLInfo(qwc));
+                    	knownBuilder.setInfo(item.toURLInfo(qwc));
+                    	knownBuilder.setRefetchableFromDate(item.nextFetchDate);
                     } catch (InvalidProtocolBufferException e) {
-                        responseObserver.onError(e);
                         LOG.error(e.getMessage(), e);
+                        responseObserver.onError(io.grpc.Status.fromThrowable(e).asException());
+                        return;
                     }
 
-                    builder.setDiscovered(builder2.build());
+                    builder.setKnown(knownBuilder.build());
+                    found = true;
                     responseObserver.onNext(builder.build());
                     break;
                 }
             }
         }
 
-        responseObserver.onCompleted();
+        if (found) {
+            responseObserver.onCompleted();
+        } else {
+        	responseObserver.onError(io.grpc.Status.NOT_FOUND.asException());
+        }
     }
 }

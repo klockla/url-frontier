@@ -1,6 +1,7 @@
 package crawlercommons.urlfrontier.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import crawlercommons.urlfrontier.Urlfrontier.URLInfo;
@@ -92,12 +93,13 @@ class RocksDBServiceTest extends RocksDBService {
                     public void onNext(URLItem value) {
                         // receives confirmation that the value has been received
                         logURLItem(value);
-                        if (value.hasDiscovered()) {
+                        if (value.hasKnown()) {
                             discovered.incrementAndGet();
 
-                            assertEquals(url, value.getDiscovered().getInfo().getUrl());
-                            assertEquals(crawlId, value.getDiscovered().getInfo().getCrawlID());
-                            assertEquals(key, value.getDiscovered().getInfo().getKey());
+                            assertEquals(url, value.getKnown().getInfo().getUrl());
+                            assertEquals(crawlId, value.getKnown().getInfo().getCrawlID());
+                            assertEquals(key, value.getKnown().getInfo().getKey());
+                            assertTrue(value.getKnown().getRefetchableFromDate() > 0);
                         }
                         count.incrementAndGet();
                     }
@@ -114,8 +116,6 @@ class RocksDBServiceTest extends RocksDBService {
                 };
 
         this.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(1, count.get());
         assertEquals(1, discovered.get());
@@ -147,6 +147,7 @@ class RocksDBServiceTest extends RocksDBService {
                             assertEquals(url, value.getKnown().getInfo().getUrl());
                             assertEquals(crawlId, value.getKnown().getInfo().getCrawlID());
                             assertEquals(key, value.getKnown().getInfo().getKey());
+                            assertEquals(0, value.getKnown().getRefetchableFromDate());
                         }
                         count.incrementAndGet();
                     }
@@ -163,8 +164,6 @@ class RocksDBServiceTest extends RocksDBService {
                 };
 
         this.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(1, count.get());
         assertEquals(1, fetched.get());
@@ -193,7 +192,8 @@ class RocksDBServiceTest extends RocksDBService {
 
                     @Override
                     public void onError(Throwable t) {
-                        t.printStackTrace();
+                    	assertEquals(io.grpc.Status.NOT_FOUND, io.grpc.Status.fromThrowable(t));
+                    	LOG.error(t.getMessage());
                     }
 
                     @Override
@@ -203,8 +203,6 @@ class RocksDBServiceTest extends RocksDBService {
                 };
 
         this.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(0, count.get());
     }
@@ -242,7 +240,8 @@ class RocksDBServiceTest extends RocksDBService {
 
                         // Internally, MemoryFrontierService does not make a distinction
                         // between discovered and known which have to be re-fetched
-                        if (value.hasDiscovered()) {
+                        if (value.hasKnown()) {
+                        	assertTrue(value.getKnown().getRefetchableFromDate() > 0);
                             fetched.incrementAndGet();
                         }
                         count.incrementAndGet();
@@ -260,8 +259,6 @@ class RocksDBServiceTest extends RocksDBService {
                 };
 
         this.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(1, count.get());
         assertEquals(1, fetched.get());

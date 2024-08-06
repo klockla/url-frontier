@@ -790,8 +790,11 @@ public class RocksDBService extends AbstractFrontierService {
 
         byte[] schedulingKey = null;
 
+        boolean found = false;
+        
         URLItem.Builder builder = URLItem.newBuilder();
-
+        KnownURLItem.Builder kb = KnownURLItem.newBuilder();
+        
         try {
             schedulingKey = rocksDB.get(columnFamilyHandleList.get(0), existenceKey);
             if (schedulingKey != null) {
@@ -805,11 +808,10 @@ public class RocksDBService extends AbstractFrontierService {
                                     .setUrl(url)
                                     .build();
 
-                    KnownURLItem.Builder kb = KnownURLItem.newBuilder();
                     kb.setRefetchableFromDate(0).setInfo(info).build();
                     builder.setKnown(kb.build());
+                    found = true;
                 } else {
-                    DiscoveredURLItem.Builder db = DiscoveredURLItem.newBuilder();
                     final int pos = currentKey.indexOf('_');
                     final int pos2 = currentKey.indexOf('_', pos + 1);
                     final int pos3 = currentKey.indexOf('_', pos2 + 1);
@@ -818,29 +820,34 @@ public class RocksDBService extends AbstractFrontierService {
 
                     URLInfo info = null;
                     try {
-                        info =
-                                URLInfo.parseFrom(
+                        info = URLInfo.parseFrom(
                                         rocksDB.get(columnFamilyHandleList.get(1), schedulingKey));
-                        db.setInfo(info);
+                        kb.setInfo(info);
+                        kb.setRefetchableFromDate(scheduled);
+                        builder.setKnown(kb.build());
                     } catch (InvalidProtocolBufferException e) {
                         LOG.error(e.getMessage(), e);
-                        responseObserver.onError(e);
+                        responseObserver.onError(io.grpc.Status.fromThrowable(e).asException());
                     }
-
-                    builder.setDiscovered(db.build());
+                    
+                    found = true;
                 }
             } else {
                 // Key is unknown
-                responseObserver.onCompleted();
-                return;
+            	found = false;
             }
-
-            responseObserver.onNext(builder.build());
 
         } catch (RocksDBException e) {
             LOG.error("Caught unlikely error ", e);
+            responseObserver.onError(io.grpc.Status.fromThrowable(e).asException());
+            return;
         }
 
-        responseObserver.onCompleted();
+        if (found) {
+        	responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+        } else {
+        	responseObserver.onError(io.grpc.Status.NOT_FOUND.asException());
+        }
     }
 }

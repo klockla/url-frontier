@@ -1,15 +1,18 @@
 package crawlercommons.urlfrontier.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import crawlercommons.urlfrontier.Urlfrontier.URLItem;
 import crawlercommons.urlfrontier.Urlfrontier.URLStatusRequest;
 import crawlercommons.urlfrontier.service.memory.MemoryFrontierService;
 import io.grpc.stub.StreamObserver;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
 
 class MemoryFrontierServiceTest {
 
@@ -45,8 +48,9 @@ class MemoryFrontierServiceTest {
                         // receives confirmation that the value has been received
                         logURLItem(value);
 
-                        if (value.hasDiscovered()) {
+                        if (value.hasKnown()) {
                             discovered.incrementAndGet();
+                            assertTrue(value.getKnown().getRefetchableFromDate() > 0);
                         }
                         count.incrementAndGet();
                     }
@@ -63,8 +67,6 @@ class MemoryFrontierServiceTest {
                 };
 
         memoryFrontierService.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(1, count.get());
         assertEquals(1, discovered.get());
@@ -92,6 +94,7 @@ class MemoryFrontierServiceTest {
                         logURLItem(value);
                         if (value.hasKnown()) {
                             fetched.incrementAndGet();
+                            assertEquals(0, value.getKnown().getRefetchableFromDate());
                         }
                         count.incrementAndGet();
                     }
@@ -108,8 +111,6 @@ class MemoryFrontierServiceTest {
                 };
 
         memoryFrontierService.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(1, count.get());
         assertEquals(1, fetched.get());
@@ -138,7 +139,8 @@ class MemoryFrontierServiceTest {
 
                     @Override
                     public void onError(Throwable t) {
-                        t.printStackTrace();
+                    	assertEquals(io.grpc.Status.NOT_FOUND, io.grpc.Status.fromThrowable(t));
+                        LOG.error(t.getMessage());
                     }
 
                     @Override
@@ -148,8 +150,6 @@ class MemoryFrontierServiceTest {
                 };
 
         memoryFrontierService.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(0, count.get());
     }
@@ -187,8 +187,9 @@ class MemoryFrontierServiceTest {
 
                         // Internally, MemoryFrontierService does not make a distinction
                         // between discovered and known which have to be re-fetched
-                        if (value.hasDiscovered()) {
+                        if (value.hasKnown()) {
                             fetched.incrementAndGet();
+                            assertTrue(value.getKnown().getRefetchableFromDate() > 0);
                         }
                         count.incrementAndGet();
                     }
@@ -205,8 +206,6 @@ class MemoryFrontierServiceTest {
                 };
 
         memoryFrontierService.getURLStatus(request, statusObserver);
-
-        statusObserver.onCompleted();
 
         assertEquals(1, count.get());
         assertEquals(1, fetched.get());
