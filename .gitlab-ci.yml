@@ -125,6 +125,7 @@ maven-dependency:
 #
 maven-deploy:
  stage: release
+ needs: ['maven-test', 'maven-compile']
  script:
    - mvn deploy -DskipTests -Dmaven.repo.local=$MAVEN_USER_HOME -s ci_settings.xml
 
@@ -133,7 +134,7 @@ docker-push:
   stage: release
   needs: ['maven-test', 'maven-compile']
   script: |
-    cd service && mvn -ntp clean package install jib:build -DskipFormatCode=true -Djib.to.image=$CONTAINER_TEST_IMAGE -Djib.from.auth.username=gitlab-ci-token -Djib.from.auth.password=$CI_JOB_TOKEN -Djib.to.auth.username=gitlab-ci-token -Djib.to.auth.password=$CI_JOB_TOKEN -Dmaven.repo.local=$MAVEN_USER_HOME
+    cd service && mvn -ntp clean package install jib:build -DskipTests -DskipFormatCode=true -Djib.to.image=$CONTAINER_TEST_IMAGE -Djib.from.auth.username=gitlab-ci-token -Djib.from.auth.password=$CI_JOB_TOKEN -Djib.to.auth.username=gitlab-ci-token -Djib.to.auth.password=$CI_JOB_TOKEN -Dmaven.repo.local=$MAVEN_USER_HOME
 
 deploy_on_aws:
   stage: deploy_on_aws
