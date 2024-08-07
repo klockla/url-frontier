@@ -179,7 +179,8 @@ class RocksDBServiceTest extends RocksDBService {
                 URLStatusRequest.newBuilder().setCrawlID(crawlId).setKey(key).setUrl(url).build();
 
         final AtomicInteger count = new AtomicInteger(0);
-
+        final AtomicInteger notfound = new AtomicInteger(0);
+        
         StreamObserver<URLItem> statusObserver =
                 new StreamObserver<>() {
 
@@ -194,6 +195,7 @@ class RocksDBServiceTest extends RocksDBService {
                     public void onError(Throwable t) {
                     	assertEquals(io.grpc.Status.NOT_FOUND, io.grpc.Status.fromThrowable(t));
                     	LOG.error(t.getMessage());
+                    	notfound.incrementAndGet();
                     }
 
                     @Override
@@ -205,6 +207,7 @@ class RocksDBServiceTest extends RocksDBService {
         this.getURLStatus(request, statusObserver);
 
         assertEquals(0, count.get());
+        assertEquals(1, notfound.get());
     }
 
     private void logURLItem(URLItem item) {

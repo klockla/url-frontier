@@ -827,7 +827,7 @@ public class RocksDBService extends AbstractFrontierService {
                         builder.setKnown(kb.build());
                     } catch (InvalidProtocolBufferException e) {
                         LOG.error(e.getMessage(), e);
-                        responseObserver.onError(io.grpc.Status.fromThrowable(e).asException());
+                        responseObserver.onError(io.grpc.Status.fromThrowable(e).asRuntimeException());
                     }
                     
                     found = true;
@@ -839,7 +839,7 @@ public class RocksDBService extends AbstractFrontierService {
 
         } catch (RocksDBException e) {
             LOG.error("Caught unlikely error ", e);
-            responseObserver.onError(io.grpc.Status.fromThrowable(e).asException());
+            responseObserver.onError(io.grpc.Status.fromThrowable(e).asRuntimeException());
             return;
         }
 
@@ -847,7 +847,7 @@ public class RocksDBService extends AbstractFrontierService {
         	responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } else {
-        	responseObserver.onError(io.grpc.Status.NOT_FOUND.asException());
+        	responseObserver.onError(io.grpc.Status.NOT_FOUND.asRuntimeException());
         }
     }
 }
