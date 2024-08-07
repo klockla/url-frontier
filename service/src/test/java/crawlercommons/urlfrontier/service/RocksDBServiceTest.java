@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+
+import crawlercommons.urlfrontier.Urlfrontier.Pagination;
 import crawlercommons.urlfrontier.Urlfrontier.URLInfo;
 import crawlercommons.urlfrontier.Urlfrontier.URLItem;
 import crawlercommons.urlfrontier.Urlfrontier.URLStatusRequest;
@@ -265,5 +267,47 @@ class RocksDBServiceTest extends RocksDBService {
 
         assertEquals(1, count.get());
         assertEquals(1, fetched.get());
+    }
+    
+    
+    @Test
+    void testListURLs() {
+	
+	Pagination pagination = Pagination.newBuilder().setCrawlID("crawl_id").build();
+	
+
+        final AtomicInteger fetched = new AtomicInteger(0);
+        final AtomicInteger count = new AtomicInteger(0);
+        	
+	StreamObserver<URLItem> statusObserver =
+                new StreamObserver<>() {
+
+                    @Override
+                    public void onNext(URLItem value) {
+                        // receives confirmation that the value has been received
+                        logURLItem(value);
+
+                        // Internally, MemoryFrontierService does not make a distinction
+                        // between discovered and known which have to be re-fetched
+                        if (value.hasKnown()) {
+                            fetched.incrementAndGet();
+                        }
+                        count.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        t.printStackTrace();
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        LOG.info("completed testListURLs");
+                    }
+                };
+
+        rocksDBService.listURLs(pagination, statusObserver);
+        assertEquals(3, count.get());
+
     }
 }

@@ -4,6 +4,7 @@
 package crawlercommons.urlfrontier.service.rocksdb;
 
 import crawlercommons.urlfrontier.Urlfrontier.AckMessage.Status;
+import crawlercommons.urlfrontier.Urlfrontier.Pagination;
 import crawlercommons.urlfrontier.Urlfrontier.URLInfo;
 import crawlercommons.urlfrontier.Urlfrontier.URLItem;
 import crawlercommons.urlfrontier.Urlfrontier.URLStatusRequest;
@@ -88,5 +89,11 @@ public class ShardedRocksDBService extends DistributedFrontierService {
     // TODO Implementation of getURLStatus for ShardedRocksDB
     public void getURLStatus(URLStatusRequest request, StreamObserver<URLItem> responseObserver) {
         responseObserver.onError(io.grpc.Status.UNIMPLEMENTED.asException());
+    }
+
+    @Override
+    // TODO Implementation of listURLs for ShardedRocksDB
+    public void listURLs(Pagination request, StreamObserver<URLItem> responseObserver) {
+        responseObserver.onError(io.grpc.Status.UNIMPLEMENTED.asException());	
     }
 }
