@@ -76,7 +76,7 @@ maven-dependency:
   stage: test
   image: registry.fpfis.eu/estat/wihp/docker/owasp-dependency-check:master
   script:
-    - mvn clean install -DskipFormatCode=true -DskipTests org.owasp:dependency-check-maven:aggregate -DdataDirectory=/owasp -DnvdApiKey=$NVD_API_KEY -DautoUpdate=false -Dmaven.repo.local=$MAVEN_USER_HOME
+    - mvn -DskipFormatCode=true -DskipTests org.owasp:dependency-check-maven:aggregate -DdataDirectory=/owasp -DnvdApiKey=$NVD_API_KEY -DautoUpdate=false -Dmaven.repo.local=$MAVEN_USER_HOME
     # script:
     # - ./mvnw verify -DskipTests=true -Pdependency -s ci_settings.xml -DnvdApiKey=$NVD_API_KEY
   artifacts:
@@ -134,7 +134,7 @@ docker-push:
   stage: release
   needs: ['maven-test', 'maven-compile']
   script: |
-    cd service && mvn -ntp clean package install jib:build -DskipTests -DskipFormatCode=true -Djib.to.image=$CONTAINER_TEST_IMAGE -Djib.from.auth.username=gitlab-ci-token -Djib.from.auth.password=$CI_JOB_TOKEN -Djib.to.auth.username=gitlab-ci-token -Djib.to.auth.password=$CI_JOB_TOKEN -Dmaven.repo.local=$MAVEN_USER_HOME
+    cd service && mvn -ntp jib:build -DskipTests -DskipFormatCode=true -Djib.to.image=$CONTAINER_TEST_IMAGE -Djib.from.auth.username=gitlab-ci-token -Djib.from.auth.password=$CI_JOB_TOKEN -Djib.to.auth.username=gitlab-ci-token -Djib.to.auth.password=$CI_JOB_TOKEN -Dmaven.repo.local=$MAVEN_USER_HOME
 
 deploy_on_aws:
   stage: deploy_on_aws
