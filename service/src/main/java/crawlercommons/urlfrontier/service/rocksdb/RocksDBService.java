@@ -788,6 +788,7 @@ public class RocksDBService extends AbstractFrontierService {
         String queueId = request.getKey();
         String url = request.getUrl();
 
+        LOG.info("Received getURLStatus request crawlID={} queueId={} url={}", crawlId, queueId, url);
         final QueueWithinCrawl qk = QueueWithinCrawl.get(queueId, crawlId);
         final String existenceKeyString = (qk.toString() + "_" + url).intern();
         final byte[] existenceKey = existenceKeyString.getBytes(StandardCharsets.UTF_8);
@@ -815,6 +816,7 @@ public class RocksDBService extends AbstractFrontierService {
                     kb.setRefetchableFromDate(0).setInfo(info).build();
                     builder.setKnown(kb.build());
                     found = true;
+                    LOG.info("found empty scheduling key for {}", existenceKeyString);
                 } else {
                     final int pos = currentKey.indexOf('_');
                     final int pos2 = currentKey.indexOf('_', pos + 1);
@@ -829,6 +831,7 @@ public class RocksDBService extends AbstractFrontierService {
                         kb.setInfo(info);
                         kb.setRefetchableFromDate(scheduled);
                         builder.setKnown(kb.build());
+                        LOG.info("found schedule {} for {}", scheduled, existenceKeyString);
                     } catch (InvalidProtocolBufferException e) {
                         LOG.error(e.getMessage(), e);
                         responseObserver.onError(io.grpc.Status.fromThrowable(e).asRuntimeException());
@@ -851,6 +854,7 @@ public class RocksDBService extends AbstractFrontierService {
         	responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } else {
+        	LOG.info("Could not find URL {}", url);
         	responseObserver.onError(io.grpc.Status.NOT_FOUND.asRuntimeException());
         }
     }

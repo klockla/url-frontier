@@ -52,8 +52,8 @@ class RocksDBServiceTest extends RocksDBService {
 
         for (rocksIterator.seekToFirst(); rocksIterator.isValid(); rocksIterator.next()) {
             String currentKey = new String(rocksIterator.key(), StandardCharsets.UTF_8);
-            QueueWithinCrawl Qkey = QueueWithinCrawl.parseAndDeNormalise(currentKey);
-            LOG.info("Qkey crawlId={} queue={}", Qkey.getCrawlid(), Qkey.getQueue());
+            QueueWithinCrawl qkey = QueueWithinCrawl.parseAndDeNormalise(currentKey);
+            LOG.info("Qkey crawlId={} queue={}", qkey.getCrawlid(), qkey.getQueue());
 
             LOG.info("current key {}", currentKey);
             byte[] schedulingKey = rocksIterator.value();
@@ -143,8 +143,8 @@ class RocksDBServiceTest extends RocksDBService {
                     public void onNext(URLItem value) {
                         // receives confirmation that the value has been received
                         logURLItem(value);
-
                         if (value.hasKnown()) {
+                            LOG.info("refetchDate --> {}", value.getKnown().getRefetchableFromDate());
                             fetched.incrementAndGet();
                             assertEquals(url, value.getKnown().getInfo().getUrl());
                             assertEquals(crawlId, value.getKnown().getInfo().getCrawlID());
@@ -161,7 +161,7 @@ class RocksDBServiceTest extends RocksDBService {
 
                     @Override
                     public void onCompleted() {
-                        LOG.info("completed testGetStatusKnown");
+                        LOG.info("completed testGetStatusCompleted");
                     }
                 };
 
@@ -259,7 +259,7 @@ class RocksDBServiceTest extends RocksDBService {
 
                     @Override
                     public void onCompleted() {
-                        LOG.info("completed testGetStatusKnown");
+                        LOG.info("completed testGetStatusToRefetch");
                     }
                 };
 
