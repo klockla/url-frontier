@@ -20,6 +20,10 @@
 		<logback.version>1.5.8</logback.version>
 		<mockito.version>5.13.0</mockito.version>
 		<commons.io.version>2.16.1</commons.io.version>
+		<jib-maven-plugin.version>3.4.3</jib-maven-plugin.version>
+		<!-- Use base image eclipse-temurin:11-jdk-jammy -->
+		<jib-maven-plugin.image>registry.fpfis.eu/estat/wihp/docker/eclipse-temurin:master</jib-maven-plugin.image>
+		<jib-maven-plugin.architecture>amd64</jib-maven-plugin.architecture>
 	</properties>
 
 	<build>
@@ -45,7 +49,46 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>com.google.cloud.tools</groupId>
+				<artifactId>jib-maven-plugin</artifactId>
+				<version>${jib-maven-plugin.version}</version>
+			</plugin>
 		</plugins>
+		
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>com.google.cloud.tools</groupId>
+					<artifactId>jib-maven-plugin</artifactId>
+					<configuration>
+						<from>
+							<image>${jib-maven-plugin.image}</image>
+							<platforms>
+								<platform>
+									<architecture>${jib-maven-plugin.architecture}</architecture>
+									<os>linux</os>
+								</platform>
+							</platforms>
+						</from>
+						<to>
+							<image>urlfrontier:latest</image>
+						</to>
+						<containerizingMode>packaged</containerizingMode>
+						<container>
+							<jvmFlags>
+								<jvmFlag>-Xms2G</jvmFlag>
+								<jvmFlag>-Xmx2G</jvmFlag>
+								<jvmFlag>-XX:+UseG1GC</jvmFlag>
+							</jvmFlags>
+							<creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+							<user>1000</user>
+						</container>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		
 	</build>
 
 	<dependencies>

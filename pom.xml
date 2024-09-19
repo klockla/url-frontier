@@ -31,15 +31,21 @@
 		<tag>HEAD</tag>
 	</scm>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
+	<repositories>
 		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+			<id>gitlab-maven</id>
+			<url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
 		</repository>
+	</repositories>
+	<distributionManagement>
+		<repository>
+			<id>gitlab-maven</id>
+			<url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
+		</repository>
+		<snapshotRepository>
+			<id>gitlab-maven</id>
+			<url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>
+		</snapshotRepository>
 	</distributionManagement>
 
 	<issueManagement>
@@ -92,6 +98,7 @@
         <picocli.version>4.7.6</picocli.version>
         <junit.version>5.11.0</junit.version>
         <protoc.version>3.25.5</protoc.version>
+		<dependency-check-maven.version>10.0.3</dependency-check-maven.version>
 	</properties>
 
 	<build>
@@ -151,6 +158,12 @@
 					<artifactId>maven-shade-plugin</artifactId>
 					<version>${version.maven-shade-plugin}</version>
 				</plugin>
+				<plugin>
+					<groupId>org.owasp</groupId>
+					<artifactId>dependency-check-maven</artifactId>
+					<version>${dependency-check-maven.version}</version>
+				</plugin>
+			
 			</plugins>
 		</pluginManagement>
 
@@ -289,6 +302,48 @@
 				</plugins>
 			</build>
 		</profile>
+		
+		<profile>
+			<id>dependency</id>
+			<dependencies>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.owasp</groupId>
+						<artifactId>dependency-check-maven</artifactId>
+						<executions>
+							<execution>
+								<id>dependency-check</id>
+								<phase>test</phase>
+								<goals>
+									<goal>aggregate</goal>
+								</goals>
+							</execution>
+						</executions>
+						 <inherited>false</inherited>
+						<configuration>
+							<assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+							<nugetconfAnalyzerEnabled>false</nugetconfAnalyzerEnabled>
+							<nuspecAnalyzerEnabled>false</nuspecAnalyzerEnabled>
+							<nodeAuditSkipDevDependencies>true</nodeAuditSkipDevDependencies>
+							<nodePackageSkipDevDependencies>true</nodePackageSkipDevDependencies>
+							<failBuildOnCVSS>7.0</failBuildOnCVSS>
+							<junitFailOnCVSS>0</junitFailOnCVSS>
+							<formats>
+								<format>JUNIT</format>
+								<format>HTML</format>
+							</formats>
+							<suppressionFiles>
+								<suppressionFile>${project.basedir}/owasp-dependency-check-suppressions.xml</suppressionFile>
+							</suppressionFiles>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+
 	</profiles>
 
 
