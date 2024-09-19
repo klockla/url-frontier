@@ -17,6 +17,8 @@ import java.time.Instant;
  */
 class InternalURL implements Comparable<InternalURL>, Serializable {
 
+    private static final long serialVersionUID = 2578536737173056843L;
+
     public long nextFetchDate;
     public String url;
     public byte[] serialised;
