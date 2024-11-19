@@ -98,7 +98,7 @@
         <picocli.version>4.7.6</picocli.version>
         <junit.version>5.11.0</junit.version>
         <protoc.version>3.25.5</protoc.version>
-		<dependency-check-maven.version>10.0.3</dependency-check-maven.version>
+		<dependency-check-maven.version>11.1.0</dependency-check-maven.version>
 	</properties>
 
 	<build>

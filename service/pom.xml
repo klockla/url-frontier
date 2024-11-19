@@ -20,7 +20,7 @@
 		<logback.version>1.5.8</logback.version>
 		<mockito.version>5.13.0</mockito.version>
 		<commons.io.version>2.16.1</commons.io.version>
-		<jib-maven-plugin.version>3.4.3</jib-maven-plugin.version>
+		<jib-maven-plugin.version>3.4.4</jib-maven-plugin.version>
 		<!-- Use base image eclipse-temurin:11-jdk-jammy -->
 		<jib-maven-plugin.image>registry.fpfis.eu/estat/wihp/docker/eclipse-temurin:master</jib-maven-plugin.image>
 		<jib-maven-plugin.architecture>amd64</jib-maven-plugin.architecture>
