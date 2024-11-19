@@ -11,6 +11,7 @@ import crawlercommons.urlfrontier.Urlfrontier.AckMessage.Builder;
 import crawlercommons.urlfrontier.Urlfrontier.AckMessage.Status;
 import crawlercommons.urlfrontier.Urlfrontier.BlockQueueParams;
 import crawlercommons.urlfrontier.Urlfrontier.Boolean;
+import crawlercommons.urlfrontier.Urlfrontier.CountUrlParams;
 import crawlercommons.urlfrontier.Urlfrontier.CrawlLimitParams;
 import crawlercommons.urlfrontier.Urlfrontier.Empty;
 import crawlercommons.urlfrontier.Urlfrontier.GetParams;
@@ -938,7 +939,7 @@ public abstract class AbstractFrontierService
                     continue;
                 }
 
-                Iterator<URLItem> urliter = urlIterator(e);
+                CloseableIterator<URLItem> urliter = urlIterator(e);
 
                 while (urliter.hasNext()) {
                     totalCount++;
@@ -951,17 +952,24 @@ public abstract class AbstractFrontierService
                         break;
                     }
                 }
+
+                try {
+                    urliter.close();
+                } catch (Exception e1) {
+                    LOG.warn("Error closing URLIterator", e1);
+                }
             }
         }
 
         responseObserver.onCompleted();
     }
 
-    protected Iterator<URLItem> urlIterator(Entry<QueueWithinCrawl, QueueInterface> qentry) {
+    protected CloseableIterator<URLItem> urlIterator(
+            Entry<QueueWithinCrawl, QueueInterface> qentry) {
         return urlIterator(qentry, 0L, Long.MAX_VALUE);
     }
 
-    protected abstract Iterator<URLItem> urlIterator(
+    protected abstract CloseableIterator<URLItem> urlIterator(
             Entry<QueueWithinCrawl, QueueInterface> qentry, long start, long max);
 
     /**
@@ -984,5 +992,59 @@ public abstract class AbstractFrontierService
         builder.setKnown(kbuilder.build());
 
         return builder.build();
+    }
+
+    /** Count the number of URLs in a given queue/crawl */
+    @Override
+    public void countURLs(
+            CountUrlParams request,
+            StreamObserver<crawlercommons.urlfrontier.Urlfrontier.Long> responseObserver) {
+
+        String key = request.getKey();
+
+        final String normalisedCrawlID = CrawlID.normaliseCrawlID(request.getCrawlID());
+
+        LOG.info("Received request to count URLs [crawlId {}, key {}]", normalisedCrawlID, key);
+
+        long totalCount = 0;
+
+        synchronized (getQueues()) {
+            Iterator<Entry<QueueWithinCrawl, QueueInterface>> qiterator =
+                    getQueues().entrySet().iterator();
+
+            while (qiterator.hasNext()) {
+                Entry<QueueWithinCrawl, QueueInterface> e = qiterator.next();
+
+                // check that it is within the right crawlID
+                if (!e.getKey().getCrawlid().equals(normalisedCrawlID)) {
+                    continue;
+                }
+
+                // check that it is within the right key/queue
+                if (key != null && !key.isEmpty() && !e.getKey().getQueue().equals(key)) {
+                    continue;
+                }
+
+                CloseableIterator<URLItem> urliter = urlIterator(e);
+
+                while (urliter.hasNext()) {
+                    urliter.next();
+                    totalCount++;
+                }
+
+                try {
+                    urliter.close();
+                } catch (Exception e1) {
+                    LOG.warn("Error closing URLIterator", e1);
+                }
+            }
+        }
+
+        responseObserver.onNext(
+                crawlercommons.urlfrontier.Urlfrontier.Long.newBuilder()
+                        .setValue(totalCount)
+                        .build());
+
+        responseObserver.onCompleted();
     }
 }

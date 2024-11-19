@@ -12,6 +12,7 @@ import crawlercommons.urlfrontier.Urlfrontier.URLInfo;
 import crawlercommons.urlfrontier.Urlfrontier.URLItem;
 import crawlercommons.urlfrontier.Urlfrontier.URLStatusRequest;
 import crawlercommons.urlfrontier.service.AbstractFrontierService;
+import crawlercommons.urlfrontier.service.CloseableIterator;
 import crawlercommons.urlfrontier.service.QueueInterface;
 import crawlercommons.urlfrontier.service.QueueWithinCrawl;
 import crawlercommons.urlfrontier.service.SynchronizedStreamObserver;
@@ -26,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -856,12 +856,12 @@ public class RocksDBService extends AbstractFrontierService {
         }
     }
 
-    public Iterator<URLItem> urlIterator(
+    public CloseableIterator<URLItem> urlIterator(
             Entry<QueueWithinCrawl, QueueInterface> qentry, long start, long maxURLs) {
         return new RocksDBURLItemIterator(qentry, start, maxURLs);
     }
 
-    class RocksDBURLItemIterator implements Iterator<URLItem> {
+    class RocksDBURLItemIterator implements CloseableIterator<URLItem> {
 
         private final org.slf4j.Logger LOG = LoggerFactory.getLogger(RocksDBURLItemIterator.class);
 
@@ -943,7 +943,9 @@ public class RocksDBService extends AbstractFrontierService {
                 final String schedulingKey =
                         new String(rocksIterator.value(), StandardCharsets.UTF_8);
 
-                LOG.debug("current key {}, schedulingKey={}", currentKey, schedulingKey);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("current key {}, schedulingKey={}", currentKey, schedulingKey);
+                }
 
                 byte[] scheduled = null;
                 try {
@@ -960,7 +962,7 @@ public class RocksDBService extends AbstractFrontierService {
                     final int pos2 = schedulingKey.indexOf('_', pos1 + 1);
                     final int pos3 = schedulingKey.indexOf('_', pos2 + 1);
 
-                    fromEpoch = Long.parseLong(schedulingKey.substring(pos2 + 1, pos3));
+                    fromEpoch = Long.parseLong(schedulingKey, pos2 + 1, pos3, 10);
 
                     try {
                         info = URLInfo.parseFrom(scheduled);
@@ -968,7 +970,9 @@ public class RocksDBService extends AbstractFrontierService {
                         LOG.error(e.getMessage(), e);
                     }
                 } else {
-                    LOG.debug("no schedule for {}", currentKey);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("no schedule for {}", currentKey);
+                    }
 
                     final int pos1 = currentKey.indexOf('_');
                     final int pos2 = currentKey.indexOf('_', pos1 + 1);
@@ -997,6 +1001,11 @@ public class RocksDBService extends AbstractFrontierService {
             }
 
             return null; // Shouldn't happen
+        }
+
+        @Override
+        public void close() throws Exception {
+            this.rocksIterator.close();
         }
     }
 }
