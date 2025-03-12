@@ -1,8 +1,15 @@
+// SPDX-FileCopyrightText: 2025 Crawler-commons
+// SPDX-License-Identifier: Apache-2.0
+
 package crawlercommons.urlfrontier.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.AbstractMap;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +18,7 @@ class ConcurrentOrderedMapTest {
     private ConcurrentOrderedMap<String, String> map;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         map = new ConcurrentOrderedMap<>();
     }
 
@@ -145,5 +152,106 @@ class ConcurrentOrderedMapTest {
 
         String ret = map.putIfAbsent("key1", "value2");
         assertEquals("value1", ret);
+    }
+
+    @Test
+    void testClear() {
+        map.put("key1", "value1");
+        map.put("key2", "value2");
+        assertEquals(2, map.size());
+
+        map.clear();
+        assertEquals(0, map.size());
+        assertTrue(map.isEmpty());
+    }
+
+    @Test
+    void testEntrySet() {
+        map.put("key1", "value1");
+        map.put("key2", "value2");
+
+        Set<Map.Entry<String, String>> entries = map.entrySet();
+        assertEquals(2, entries.size());
+        assertTrue(entries.contains(new AbstractMap.SimpleEntry<>("key1", "value1")));
+        assertTrue(entries.contains(new AbstractMap.SimpleEntry<>("key2", "value2")));
+    }
+
+    @Test
+    void testKeySet() {
+        map.put("key1", "value1");
+        map.put("key2", "value2");
+
+        Set<String> keys = map.keySet();
+        assertEquals(2, keys.size());
+        assertTrue(keys.contains("key1"));
+        assertTrue(keys.contains("key2"));
+    }
+
+    @Test
+    void testValues() {
+        map.put("key1", "value1");
+        map.put("key2", "value2");
+
+        Collection<String> values = map.values();
+        assertEquals(2, values.size());
+        assertTrue(values.contains("value1"));
+        assertTrue(values.contains("value2"));
+    }
+
+    @Test
+    void testIsEmpty() {
+        assertTrue(map.isEmpty());
+
+        map.put("key1", "value1");
+        assertFalse(map.isEmpty());
+
+        map.clear();
+        assertTrue(map.isEmpty());
+    }
+
+    @Test
+    void testPutAll() {
+        Map<String, String> otherMap = Map.of("key1", "value1", "key2", "value2");
+        map.putAll(otherMap);
+
+        assertEquals(2, map.size());
+        assertEquals("value1", map.get("key1"));
+        assertEquals("value2", map.get("key2"));
+    }
+
+    @Test
+    void testCompute() {
+        map.put("key1", "value1");
+        map.compute("key1", (k, v) -> v + " updated");
+        assertEquals("value1 updated", map.get("key1"));
+
+        map.compute("key2", (k, v) -> "new_value");
+        assertEquals("new_value", map.get("key2"));
+    }
+
+    @Test
+    void testRemoveWithValues() {
+        map.put("key1", "value1");
+        assertTrue(map.remove("key1", "value1"));
+        assertFalse(map.containsKey("key1"));
+    }
+
+    @Test
+    void testReplaceAll() {
+        map.put("key1", "value1");
+        map.put("key2", "value2");
+
+        map.replaceAll((k, v) -> v + "_updated");
+        assertEquals("value1_updated", map.get("key1"));
+    }
+
+    @Test
+    void testForEach() {
+        map.put("key1", "value1");
+        map.put("key2", "value2");
+
+        int[] count = {0};
+        map.forEach((k, v) -> count[0]++);
+        assertEquals(2, count[0]);
     }
 }

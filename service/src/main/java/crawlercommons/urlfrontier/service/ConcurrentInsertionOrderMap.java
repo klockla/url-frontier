@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Crawler-commons
+// SPDX-License-Identifier: Apache-2.0
+
 package crawlercommons.urlfrontier.service;
 
 import java.util.Collection;
@@ -20,24 +23,19 @@ public interface ConcurrentInsertionOrderMap<K, V> extends ConcurrentMap<K, V> {
     /** Remove & returns the first entry according to insertion order */
     Entry<K, V> pollFirstEntry();
 
-    /**
-     * Returns a set containing the keys in this map The set is a snapshot of the map and is NOT
-     * backed by it (Calling remove on an iterator of this set will not affect the map)
-     */
+    /** Returns a set containing the keys in this map. Remove is not supported by the iterator */
     @Override
     Set<K> keySet();
 
     /**
-     * Returns a set containing the mappings in this map. The set is a snapshot of the map and is
-     * NOT backed by it (Calling remove on an iterator of this set will not affect the map)
+     * Returns a set containing the mappings in this map. Remove is not supported by the iterator
      */
     @Override
     Set<Map.Entry<K, V>> entrySet();
 
     /**
-     * Returns a collection containing the values in this map. The collection is a snapshot of the
-     * map and is NOT backed by it (Calling remove on an iterator of this set will not affect the
-     * map) Insertion order of the map will be preserved in the returned collection.
+     * Returns a collection containing the values in this map. Remove is not supported by the
+     * iterator
      */
     @Override
     Collection<V> values();
