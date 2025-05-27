@@ -78,7 +78,7 @@ class ConcurrentOrderedMapTest {
                     new Thread(
                             () -> {
                                 for (int j = 0; j < numIterations; j++) {
-                                    String key = "key" + j;
+                                    String key = Thread.currentThread().getId() + " iter=" + j;
                                     String value = "value" + j;
                                     map.put(key, value);
                                     assertEquals(

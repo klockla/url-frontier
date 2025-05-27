@@ -605,19 +605,18 @@ public class RocksDBService extends AbstractFrontierService {
         int queuesWritten = 0;
         if (!getQueues().isEmpty()) {
             ByteBuffer bb = ByteBuffer.allocate(8);
-            synchronized (getQueues()) {
-                for (Entry<QueueWithinCrawl, QueueInterface> entry : getQueues().entrySet()) {
-                    queuesWritten++;
-                    int active = entry.getValue().countActive();
-                    int completed = entry.getValue().getCountCompleted();
-                    bb.putInt(active);
-                    bb.putInt(completed);
-                    rocksDB.put(
-                            columnFamilyHandleList.get(2),
-                            entry.getKey().toString().getBytes(),
-                            bb.array());
-                    bb.clear();
-                }
+
+            for (Entry<QueueWithinCrawl, QueueInterface> entry : getQueues().entrySet()) {
+                queuesWritten++;
+                int active = entry.getValue().countActive();
+                int completed = entry.getValue().getCountCompleted();
+                bb.putInt(active);
+                bb.putInt(completed);
+                rocksDB.put(
+                        columnFamilyHandleList.get(2),
+                        entry.getKey().toString().getBytes(),
+                        bb.array());
+                bb.clear();
             }
         }
         long end = System.currentTimeMillis();
@@ -699,13 +698,13 @@ public class RocksDBService extends AbstractFrontierService {
                 if (samePrefix) {
                     if (startKey == null) {
                         startKey =
-                                (prefixed_queue.getCrawlid().replaceAll("_", "%5F") + "_")
+                                (prefixed_queue.getCrawlid().replace("_", "%5F") + "_")
                                         .getBytes(StandardCharsets.UTF_8);
                     }
                     toDelete.add(prefixed_queue);
                 } else if (startKey != null) {
                     endKey =
-                            (prefixed_queue.getCrawlid().replaceAll("_", "%5F") + "_")
+                            (prefixed_queue.getCrawlid().replace("_", "%5F") + "_")
                                     .getBytes(StandardCharsets.UTF_8);
                     break;
                 }

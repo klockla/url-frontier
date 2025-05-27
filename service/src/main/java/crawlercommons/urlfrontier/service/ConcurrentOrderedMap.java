@@ -49,10 +49,6 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
 
     private final Striped<Lock> striped;
 
-    // Used for first entry tracking
-    private volatile Long firstEntryOrder = null;
-    private K firstEntryKey = null;
-
     class ValueEntry {
         public ValueEntry(V v, long o) {
             this.value = v;
@@ -114,17 +110,8 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
                 ventry.value = value;
             } else {
                 long newOrder = insertionCounter.getAndIncrement();
-                insertionOrderMap.put(newOrder, key);
                 valueMap.put(key, new ValueEntry(value, newOrder));
-
-                if (firstEntryOrder == null) {
-                    firstEntryOrder = newOrder;
-
-                    synchronized (this) {
-                        // Update first entry key if this is the first entry
-                        firstEntryKey = key;
-                    }
-                }
+                insertionOrderMap.put(newOrder, key);
             }
 
             return oldValue;
@@ -152,20 +139,6 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
             // Remove from insertion order map if value existed
             if (removed != null) {
                 insertionOrderMap.remove(removed.order);
-                if (removed.order == firstEntryOrder) {
-                    // Update first entry order if the removed entry was the first one
-                    try {
-                        firstEntryOrder = insertionOrderMap.firstKey();
-                        synchronized (this) {
-                            firstEntryKey = insertionOrderMap.get(firstEntryOrder);
-                        }
-                    } catch (NoSuchElementException e) {
-                        firstEntryOrder = null;
-                        synchronized (this) {
-                            firstEntryKey = null;
-                        }
-                    }
-                }
             }
 
             return (removed != null) ? removed.value : null;
@@ -271,11 +244,6 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
             insertionOrderMap.clear();
             insertionCounter.set(0);
 
-            firstEntryOrder = null;
-            synchronized (this) {
-                firstEntryKey = null;
-            }
-
         } finally {
             unlockAllStripes();
         }
@@ -369,7 +337,8 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
                 return new AbstractMap.SimpleImmutableEntry<>(key, valueEntry.value);
             } else {
                 LOG.error(
-                        "Inconsistent state: key {} exists in order map but not in value map", key);
+                        "Inconsistent state (firstEntry): key {} exists in order map but not in value map",
+                        key);
                 return null;
             }
         } else {
@@ -380,49 +349,27 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
     /*
      * Remove & Returns the first entry according to insertion order
      */
-    public Entry<K, V> pollFirstEntry() {
+    public synchronized Entry<K, V> pollFirstEntry() {
         K key;
-        Long order;
-        Lock stripe = null;
 
-        // Synchronize to ensure atomic read of firstEntryKey
-        synchronized (this) {
-            order = firstEntryOrder;
-            key = firstEntryKey;
-            if (key == null || order == null) {
-                return null;
-            }
-
-            stripe = getStripe(key);
-            stripe.lock();
+        Entry<Long, K> removed = insertionOrderMap.pollFirstEntry();
+        if (removed == null) {
+            return null;
         }
 
-        try {
-            Entry<Long, K> removed = insertionOrderMap.pollFirstEntry();
-            if (removed == null) {
-                return null;
-            }
+        // Get and remove from value map
+        key = removed.getValue();
 
-            // Get and remove from value map
-            ValueEntry valueEntry = valueMap.remove(removed.getValue());
+        Lock stripe = getStripe(key);
+        stripe.lock();
+
+        try {
+            ValueEntry valueEntry = valueMap.remove(key);
             if (valueEntry == null) {
                 LOG.error(
-                        "Inconsistent state: key {} exists in order map but not in value map", key);
+                        "Inconsistent state (pollFirstEntry): key {} exists in order map but not in value map",
+                        key);
                 return null;
-            }
-
-            // Update first entry tracking
-            Entry<Long, K> newFirst = insertionOrderMap.firstEntry();
-            if (newFirst != null) {
-                firstEntryOrder = newFirst.getKey();
-                synchronized (this) {
-                    firstEntryKey = newFirst.getValue();
-                }
-            } else {
-                firstEntryOrder = null;
-                synchronized (this) {
-                    firstEntryKey = null;
-                }
             }
 
             return new AbstractMap.SimpleImmutableEntry<>(key, valueEntry.value);
@@ -464,17 +411,8 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
                     ventry.value = entry.getValue();
                 } else {
                     long newOrder = insertionCounter.getAndIncrement();
-                    insertionOrderMap.put(newOrder, key);
                     valueMap.put(key, new ValueEntry(entry.getValue(), newOrder));
-
-                    if (firstEntryOrder == null) {
-                        firstEntryOrder = newOrder;
-
-                        synchronized (this) {
-                            // Update first entry key if this is the first entry
-                            firstEntryKey = key;
-                        }
-                    }
+                    insertionOrderMap.put(newOrder, key);
                 }
             }
         } finally {
