@@ -875,6 +875,8 @@ public class RocksDBService extends AbstractFrontierService {
         private final RocksIterator rocksIterator;
         private boolean hasNext = true;
 
+        private URLInfo.Builder infoBuilder = URLInfo.newBuilder();
+
         public RocksDBURLItemIterator(
                 Entry<QueueWithinCrawl, QueueInterface> qentry, long start, long maxURLs) {
 
@@ -972,8 +974,9 @@ public class RocksDBService extends AbstractFrontierService {
                     final int pos1 = currentKey.indexOf('_');
                     final int pos2 = currentKey.indexOf('_', pos1 + 1);
 
+                    infoBuilder.clear();
                     info =
-                            URLInfo.newBuilder()
+                            infoBuilder
                                     .setCrawlID(Qkey.getCrawlid())
                                     .setKey(Qkey.getQueue())
                                     .setUrl(currentKey.substring(pos2 + 1))
