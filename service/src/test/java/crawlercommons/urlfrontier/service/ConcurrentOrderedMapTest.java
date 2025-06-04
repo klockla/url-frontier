@@ -5,6 +5,7 @@ package crawlercommons.urlfrontier.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.vmlens.api.AllInterleavings;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Iterator;
@@ -72,42 +73,56 @@ class ConcurrentOrderedMapTest {
     @Test
     void testConcurrentOperations() {
         // This test checks that multiple threads can add and remove entries concurrently
+        int CONCURRENCY_LEVEL = 3;
 
-        Thread[] threads = new Thread[NUM_THREADS];
+        Thread[] threads = new Thread[CONCURRENCY_LEVEL];
 
-        for (int i = 0; i < NUM_THREADS; i++) {
-            threads[i] =
-                    new Thread(
-                            () -> {
-                                for (int j = 0; j < NUM_ITERATIONS; j++) {
-                                    String key = Thread.currentThread().getId() + " iter=" + j;
-                                    String value = "value" + j;
-                                    map.put(key, value);
-                                    assertEquals(
-                                            value,
-                                            map.get(key),
-                                            "Value should be retrieved correctly");
+        try (AllInterleavings allInterleavings =
+                new AllInterleavings("testConcurrentOperations"); ) {
 
-                                    // Remove the key after adding
-                                    map.remove(key);
+            while (allInterleavings.hasNext()) {
+                for (int i = 0; i < CONCURRENCY_LEVEL; i++) {
+                    threads[i] =
+                            new Thread() {
+                                @Override
+                                public void run() {
+                                    for (int j = 0; j < 10; j++) {
+                                        String key =
+                                                "Thread "
+                                                        + Thread.currentThread().getId()
+                                                        + " iter="
+                                                        + j;
+                                        String value = "value" + j;
+                                        map.put(key, value);
+                                        assertEquals(
+                                                value,
+                                                map.get(key),
+                                                "Value should be retrieved correctly");
+
+                                        // Remove the key after adding
+                                        map.remove(key);
+                                    }
                                 }
-                            });
-        }
+                            };
+                }
 
-        for (Thread thread : threads) {
-            thread.start();
-        }
+                for (Thread thread : threads) {
+                    thread.start();
+                }
 
-        for (Thread thread : threads) {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
+                for (Thread thread : threads) {
+                    try {
+                        thread.join();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                }
             }
-        }
 
-        assertEquals(0, map.size(), "Size of the map should be zero after concurrent operations");
+            assertEquals(
+                    0, map.size(), "Size of the map should be zero after concurrent operations");
+        }
     }
 
     @Test
