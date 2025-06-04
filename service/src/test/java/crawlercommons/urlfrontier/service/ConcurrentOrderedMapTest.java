@@ -6,8 +6,10 @@ package crawlercommons.urlfrontier.service;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +20,7 @@ class ConcurrentOrderedMapTest {
     private ConcurrentOrderedMap<String, String> map;
 
     private final int NUM_THREADS = 10;
-    private final int NUM_ITERATIONS = 100;
+    private final int NUM_ENTRIES = 100;
 
     @BeforeEach
     void setUp() {
@@ -79,7 +81,7 @@ class ConcurrentOrderedMapTest {
             threads[i] =
                     new Thread(
                             () -> {
-                                for (int j = 0; j < NUM_ITERATIONS; j++) {
+                                for (int j = 0; j < NUM_ENTRIES; j++) {
                                     String key = Thread.currentThread().getId() + " iter=" + j;
                                     String value = "value" + j;
                                     map.put(key, value);
@@ -330,7 +332,7 @@ class ConcurrentOrderedMapTest {
     void testConcurrentPollFirstEntry() throws InterruptedException {
         // This test checks that multiple threads can poll entries from the map concurrently
         // Fill the map with entries
-        for (int i = 0; i < NUM_ITERATIONS; i++) {
+        for (int i = 0; i < NUM_ENTRIES; i++) {
             map.put("key" + i, "value" + i);
         }
 
@@ -361,7 +363,82 @@ class ConcurrentOrderedMapTest {
         }
 
         // All entries should have been polled exactly once
-        assertEquals(NUM_ITERATIONS, polledKeys.size());
+        assertEquals(NUM_ENTRIES, polledKeys.size());
         assertTrue(map.isEmpty());
+    }
+
+    @Test
+    void testRotateFirstEntry() {
+        // This test checks that the rotateFirstentry method works correctly
+        for (int i = 0; i < 10; i++) {
+            map.put("key" + i, "value" + i);
+        }
+
+        Map.Entry<String, String> first = map.firstEntry();
+        Map.Entry<String, String> rotated = map.rotateFirstEntry();
+        Map.Entry<String, String> second = map.firstEntry();
+
+        assertEquals("key0", first.getKey());
+        assertEquals("value0", first.getValue());
+
+        assertEquals("key0", rotated.getKey());
+        assertEquals("value0", rotated.getValue());
+
+        assertEquals("key1", second.getKey());
+        assertEquals("value1", second.getValue());
+
+        List<String> keys = new ArrayList<>(map.keySet());
+        List<String> values = new ArrayList<>(map.values());
+
+        assertEquals(10, keys.size());
+        assertEquals(10, values.size());
+
+        assertEquals("key0", keys.get(keys.size() - 1));
+        assertEquals("value0", values.get(values.size() - 1));
+    }
+
+    @Test
+    void testConcurrentRotateFirstEntry() throws InterruptedException {
+        int rotationsPerThread = 1000;
+
+        // Fill the map with entries
+        for (int i = 0; i < NUM_ENTRIES; i++) {
+            map.put("key" + i, "value" + i);
+        }
+
+        Thread[] threads = new Thread[NUM_THREADS];
+
+        Runnable rotator =
+                () -> {
+                    for (int i = 0; i < rotationsPerThread; i++) {
+                        Map.Entry<String, String> entry = map.rotateFirstEntry();
+                        // Should never return null as long as map is not empty
+                        assertNotNull(
+                                entry,
+                                "rotateFirstEntry should not return null when map is not empty");
+                        assertNotNull(entry.getKey());
+                        assertNotNull(entry.getValue());
+                    }
+                };
+
+        for (int i = 0; i < NUM_THREADS; i++) {
+            threads[i] = new Thread(rotator);
+        }
+        for (Thread t : threads) {
+            t.start();
+        }
+
+        for (Thread t : threads) {
+            t.join();
+        }
+
+        // After all rotations, all original keys and values should still be present
+        for (int i = 0; i < NUM_ENTRIES; i++) {
+            assertEquals(
+                    "value" + i,
+                    map.get("key" + i),
+                    "All original entries must remain after rotations");
+        }
+        assertEquals(NUM_ENTRIES, map.size());
     }
 }

@@ -397,6 +397,43 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
         }
     }
 
+    /*
+     * Returns the first entry according to insertion order and
+     * removes it from the head of the insertion order map and puts it at the end.
+     */
+    public Entry<K, V> rotateFirstEntry() {
+        K key;
+
+        Entry<Long, K> removed = insertionOrderMap.pollFirstEntry();
+        if (removed == null) {
+            return null;
+        }
+
+        // Get and remove from value map
+        key = removed.getValue();
+
+        Lock stripe = getStripe(key);
+        stripe.lock();
+
+        try {
+            ValueEntry valueEntry = valueMap.get(key);
+            if (valueEntry == null) {
+                LOG.error(
+                        "Inconsistent state (rotateFirstEntry): key {} exists in order map but not in value map",
+                        key);
+                return null;
+            }
+
+            long newOrder = insertionCounter.getAndIncrement();
+            valueEntry.order = newOrder;
+            insertionOrderMap.put(newOrder, key);
+
+            return new AbstractMap.SimpleImmutableEntry<>(key, valueEntry.value);
+        } finally {
+            stripe.unlock();
+        }
+    }
+
     @Override
     public boolean isEmpty() {
 
