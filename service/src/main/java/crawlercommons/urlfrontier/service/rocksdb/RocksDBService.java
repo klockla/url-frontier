@@ -605,18 +605,19 @@ public class RocksDBService extends AbstractFrontierService {
         int queuesWritten = 0;
         if (!getQueues().isEmpty()) {
             ByteBuffer bb = ByteBuffer.allocate(8);
-
-            for (Entry<QueueWithinCrawl, QueueInterface> entry : getQueues().entrySet()) {
-                queuesWritten++;
-                int active = entry.getValue().countActive();
-                int completed = entry.getValue().getCountCompleted();
-                bb.putInt(active);
-                bb.putInt(completed);
-                rocksDB.put(
-                        columnFamilyHandleList.get(2),
-                        entry.getKey().toString().getBytes(),
-                        bb.array());
-                bb.clear();
+            synchronized (getQueues()) {
+                for (Entry<QueueWithinCrawl, QueueInterface> entry : getQueues().entrySet()) {
+                    queuesWritten++;
+                    int active = entry.getValue().countActive();
+                    int completed = entry.getValue().getCountCompleted();
+                    bb.putInt(active);
+                    bb.putInt(completed);
+                    rocksDB.put(
+                            columnFamilyHandleList.get(2),
+                            entry.getKey().toString().getBytes(),
+                            bb.array());
+                    bb.clear();
+                }
             }
         }
         long end = System.currentTimeMillis();
