@@ -918,7 +918,7 @@ public abstract class AbstractFrontierService
         long sentCount = 0;
 
         Iterator<Entry<QueueWithinCrawl, QueueInterface>> qiterator =
-                getQueues().entrySet().iterator();
+                getQueues().entrySetView().iterator();
 
         while (qiterator.hasNext() && sentCount < maxURLs) {
             Entry<QueueWithinCrawl, QueueInterface> e = qiterator.next();
@@ -1011,7 +1011,7 @@ public abstract class AbstractFrontierService
         long totalCount = 0;
 
         Iterator<Entry<QueueWithinCrawl, QueueInterface>> qiterator =
-                getQueues().entrySet().iterator();
+                getQueues().entrySetView().iterator();
 
         while (qiterator.hasNext()) {
             Entry<QueueWithinCrawl, QueueInterface> e = qiterator.next();

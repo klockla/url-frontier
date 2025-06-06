@@ -9,6 +9,7 @@ import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -179,6 +180,24 @@ public class ConcurrentOrderedMap<K, V> implements ConcurrentInsertionOrderMap<K
                 return valueMap.size();
             }
         };
+    }
+
+    @Override
+    public Set<Map.Entry<K, V>> entrySetView() {
+        LinkedHashSet<Map.Entry<K, V>> entrySet = new LinkedHashSet<>(valueMap.size());
+        insertionOrderMap.forEach(
+                (order, key) -> {
+                    ValueEntry valueEntry = valueMap.get(key);
+                    if (valueEntry != null) {
+                        entrySet.add(new AbstractMap.SimpleImmutableEntry<>(key, valueEntry.value));
+                    } else {
+                        LOG.warn(
+                                "Inconsistent state (entrySetView): key {} exists in order map but not in value map",
+                                key);
+                    }
+                });
+
+        return entrySet;
     }
 
     @Override
