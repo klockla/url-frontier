@@ -870,13 +870,12 @@ public class RocksDBService extends AbstractFrontierService {
         private long sent = 0;
         private URLItem.Builder builder = URLItem.newBuilder();
         private KnownURLItem.Builder knownBuilder = KnownURLItem.newBuilder();
+        private URLInfo.Builder infoBuilder = URLInfo.newBuilder();
 
         private final QueueWithinCrawl queueID;
         private final byte[] prefixKey;
         private final RocksIterator rocksIterator;
         private boolean hasNext = true;
-
-        private URLInfo.Builder infoBuilder = URLInfo.newBuilder();
 
         public RocksDBURLItemIterator(
                 Entry<QueueWithinCrawl, QueueInterface> qentry, long start, long maxURLs) {
@@ -884,8 +883,6 @@ public class RocksDBService extends AbstractFrontierService {
             this.queueID = qentry.getKey();
             this.prefixKey = (queueID.toString() + "_").getBytes(StandardCharsets.UTF_8);
             this.maxURLs = maxURLs;
-            this.builder = URLItem.newBuilder();
-            this.knownBuilder = KnownURLItem.newBuilder();
 
             this.rocksIterator = rocksDB.newIterator(columnFamilyHandleList.get(0));
             this.rocksIterator.seek(prefixKey);
