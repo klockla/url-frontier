@@ -98,7 +98,7 @@
         <picocli.version>4.7.6</picocli.version>
         <junit.version>5.11.0</junit.version>
         <protoc.version>3.25.5</protoc.version>
-		<dependency-check-maven.version>11.1.0</dependency-check-maven.version>
+		<dependency-check-maven.version>12.1.6</dependency-check-maven.version>
 	</properties>
 
 	<build>
@@ -348,6 +348,8 @@
 							<suppressionFiles>
 								<suppressionFile>${project.basedir}/owasp-dependency-check-suppressions.xml</suppressionFile>
 							</suppressionFiles>
+							<ossIndexUsername>laurent.klock@accenture.com</ossIndexUsername>
+                            <ossIndexPassword>dc5ed45548df6b6e60001134854ccaa22c9d2ce5</ossIndexPassword>
 						</configuration>
 					</plugin>
 				</plugins>
