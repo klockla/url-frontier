@@ -78,8 +78,9 @@
 						<containerizingMode>packaged</containerizingMode>
 						<container>
 							<jvmFlags>
-								<jvmFlag>-Xms2G</jvmFlag>
-								<jvmFlag>-Xmx2G</jvmFlag>
+								<jvmFlag>-XX:InitialRAMPercentage=50</jvmFlag>
+								<jvmFlag>-XX:MinRAMPercentage=50</jvmFlag>
+								<jvmFlag>-XX:MaxRAMPercentage=75</jvmFlag>
 								<jvmFlag>-XX:+UseG1GC</jvmFlag>
 							</jvmFlags>
 							<creationTime>USE_CURRENT_TIMESTAMP</creationTime>
