@@ -33,6 +33,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -68,7 +69,7 @@ public class RocksDBService extends AbstractFrontierService {
 
     // no explicit config
     public RocksDBService(String host, int port) {
-        this(new HashMap<String, String>(), host, port);
+        this(new HashMap<>(), host, port);
     }
 
     private final ConcurrentHashMap<QueueWithinCrawl, QueueWithinCrawl> queuesBeingDeleted =
@@ -249,6 +250,9 @@ public class RocksDBService extends AbstractFrontierService {
                     // double check the number of scheduled later on
                     numScheduled++;
                 }
+
+                // Increment the number of URLs for that crawl
+                incrementURLCount(Qkey.getCrawlid());
             }
         }
         // check the last key
@@ -257,6 +261,13 @@ public class RocksDBService extends AbstractFrontierService {
                 && getQueues().get(previousQueueID).countActive() != numScheduled) {
             throw new RuntimeException(
                     "Incorrect number of active URLs for queue " + previousQueueID);
+        }
+
+        if (check) {
+            LOG.info("Recovery scan completed - {} queues found", getQueues().size());
+            for (Entry<String, MutableLong> entry : urlCountMap.entrySet()) {
+                LOG.info("CrawlID {} has {} URLs", entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -398,6 +409,7 @@ public class RocksDBService extends AbstractFrontierService {
         final byte[] existenceKey = existenceKeyString.getBytes(StandardCharsets.UTF_8);
 
         synchronized (existenceKeyString) {
+            boolean newUrl = true;
 
             // is this URL already known?
             try (WriteBatch writeBatch = new WriteBatch();
@@ -428,6 +440,7 @@ public class RocksDBService extends AbstractFrontierService {
                     // remove from queue metadata
                     queueMD.removeFromProcessed(url);
                     queueMD.decrementActive();
+                    newUrl = false;
                 }
 
                 // add the new item
@@ -451,6 +464,10 @@ public class RocksDBService extends AbstractFrontierService {
                     writeBatch.put(
                             columnFamilyHandleList.get(1), schedulingKey, info.toByteArray());
                     queueMD.incrementActive();
+
+                    if (newUrl) {
+                        incrementURLCount(crawlID);
+                    }
                 }
 
                 if (isClosing()) {
@@ -670,6 +687,9 @@ public class RocksDBService extends AbstractFrontierService {
             io.grpc.stub.StreamObserver<crawlercommons.urlfrontier.Urlfrontier.Long>
                     responseObserver) {
         long total = deleteLocalCrawl(crawlID.getValue());
+
+        urlCountMap.remove(crawlID.getValue());
+
         responseObserver.onNext(
                 crawlercommons.urlfrontier.Urlfrontier.Long.newBuilder().setValue(total).build());
         responseObserver.onCompleted();

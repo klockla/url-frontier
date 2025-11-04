@@ -126,6 +126,7 @@ public class MemoryFrontierService extends AbstractFrontierService {
             URLQueue queue = (URLQueue) getQueues().get(qk);
             if (queue == null) {
                 getQueues().put(qk, new URLQueue(iu));
+                incrementURLCount(iu.crawlID);
                 return Status.OK;
             }
 
@@ -148,6 +149,9 @@ public class MemoryFrontierService extends AbstractFrontierService {
                 queue.addToCompleted(iu.url);
             } else {
                 queue.add(iu);
+
+                // Increment the URL count only if it's a new URL being added to the queue
+                incrementURLCount(iu.crawlID);
             }
         }
 

@@ -488,6 +488,14 @@ class MemoryFrontierServiceTest {
     }
 
     @Test
+    @Order(12)
+    void testTotalUrlCount() {
+        long totalUrlCount = memoryFrontierService.getURLCount("crawl_id");
+
+        assertEquals(4, totalUrlCount);
+    }
+
+    @Test
     @Order(99)
     // Must be last test
     void testNoRescheduleCompleted() {

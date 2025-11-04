@@ -6,6 +6,7 @@ package crawlercommons.urlfrontier.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import crawlercommons.urlfrontier.CrawlID;
+import crawlercommons.urlfrontier.Urlfrontier;
 import crawlercommons.urlfrontier.Urlfrontier.AckMessage;
 import crawlercommons.urlfrontier.Urlfrontier.AckMessage.Builder;
 import crawlercommons.urlfrontier.Urlfrontier.AckMessage.Status;
@@ -15,6 +16,7 @@ import crawlercommons.urlfrontier.Urlfrontier.CountUrlParams;
 import crawlercommons.urlfrontier.Urlfrontier.CrawlLimitParams;
 import crawlercommons.urlfrontier.Urlfrontier.Empty;
 import crawlercommons.urlfrontier.Urlfrontier.GetParams;
+import crawlercommons.urlfrontier.Urlfrontier.GetTotalURLParams;
 import crawlercommons.urlfrontier.Urlfrontier.KnownURLItem;
 import crawlercommons.urlfrontier.Urlfrontier.Local;
 import crawlercommons.urlfrontier.Urlfrontier.LogLevelParams;
@@ -43,12 +45,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.slf4j.LoggerFactory;
 
 public abstract class AbstractFrontierService
@@ -120,6 +126,9 @@ public abstract class AbstractFrontierService
     // in memory map of metadata for each queue
     private final ConcurrentInsertionOrderMap<QueueWithinCrawl, QueueInterface> queues =
             new ConcurrentOrderedMap<>();
+
+    // Nb of URLs per crawlID
+    protected final ConcurrentMap<String, MutableLong> urlCountMap = new ConcurrentHashMap<>();
 
     protected final ExecutorService readExecutorService;
     protected final ExecutorService writeExecutorService;
@@ -247,7 +256,10 @@ public abstract class AbstractFrontierService
                 QueueInterface q = getQueues().remove(quid);
                 total += q.countActive();
             }
+
+            deleteURLCount(normalisedCrawlID);
         }
+
         responseObserver.onNext(
                 crawlercommons.urlfrontier.Urlfrontier.Long.newBuilder().setValue(total).build());
         responseObserver.onCompleted();
@@ -1054,8 +1066,57 @@ public abstract class AbstractFrontierService
     private boolean filterURL(URLItem cur, String text, boolean ignoreCase) {
 
         String curURL = cur.getKnown().getInfo().getUrl();
-        return ignoreCase
-                ? StringUtils.containsIgnoreCase(curURL, text)
-                : StringUtils.contains(curURL, text);
+        return ignoreCase ? Strings.CI.contains(curURL, text) : Strings.CS.contains(curURL, text);
+    }
+
+    /**
+     * Increment the URL count for a given crawlID
+     *
+     * @param crawlID
+     * @return
+     */
+    protected long incrementURLCount(String crawlId) {
+
+        // Using compute to atomically initialize or increment
+        MutableLong res =
+                urlCountMap.compute(
+                        crawlId,
+                        (k, v) -> {
+                            if (v == null) {
+                                return new MutableLong(1);
+                            } else {
+                                v.increment();
+                                return v;
+                            }
+                        });
+
+        return res.longValue();
+    }
+
+    public long getURLCount(String crawlID) {
+        MutableLong count = urlCountMap.get(crawlID);
+        if (count != null) {
+            return count.longValue();
+        } else {
+            return 0;
+        }
+    }
+
+    private void deleteURLCount(String crawlID) {
+        urlCountMap.remove(crawlID);
+    }
+
+    @Override
+    public void getTotalURLs(
+            GetTotalURLParams request,
+            StreamObserver<crawlercommons.urlfrontier.Urlfrontier.Long> responseObserver) {
+
+        String crawlId = CrawlID.normaliseCrawlID(request.getCrawlID());
+
+        Urlfrontier.Long count =
+                Urlfrontier.Long.newBuilder().setValue(getURLCount(crawlId)).build();
+
+        responseObserver.onNext(count);
+        responseObserver.onCompleted();
     }
 }

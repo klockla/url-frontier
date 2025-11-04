@@ -87,6 +87,12 @@ service URLFrontier {
      
      /** Count URLs currently in the frontier **/
      rpc CountURLs(CountUrlParams) returns (Long) {}
+     
+     /** Return the total number of URLs for a crawler.
+     	 This method does not iterate over all URLs but rather
+     	 returns current value of the dynamic URL counter
+      **/
+     rpc GetTotalURLs(GetTotalURLParams) returns (Long) {}
 }
 
 /** 
@@ -343,4 +349,9 @@ message CountUrlParams {
   optional bool ignoreCase = 4;
   // only for the current local instance (default is false)
   optional bool local = 5;
+}
+
+message GetTotalURLParams {
+  // crawl ID
+  string crawlID = 1;
 }
